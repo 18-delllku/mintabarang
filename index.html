@@ -1,0 +1,1478 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PORTAL PERMINTAAN BARANG - E-Requisition System</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icon -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .workflow-step {
+            transition: all 0.3s ease;
+        }
+        .workflow-step.active {
+            border-color: #2563eb;
+            background-color: #eff6ff;
+        }
+        
+        /* CSS Khusus Cetak / Print */
+        @media print {
+            @page {
+                size: A4 portrait;
+                margin: 8mm 10mm;
+            }
+            html, body {
+                height: auto !important;
+                min-height: 0 !important;
+                background: #fff !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                overflow: visible !important;
+            }
+            body * {
+                visibility: hidden !important;
+            }
+            #printArea, #printArea * {
+                visibility: visible !important;
+            }
+            #printArea {
+                position: absolute !important;
+                left: 0 !important;
+                top: 0 !important;
+                width: 100% !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                display: block !important;
+                box-sizing: border-box !important;
+            }
+            .print-section {
+                box-sizing: border-box !important;
+                page-break-inside: avoid !important;
+                break-inside: avoid !important;
+            }
+            table, tr, td, th {
+                page-break-inside: avoid !important;
+                break-inside: avoid !important;
+            }
+        }
+    </style>
+</head>
+<body class="bg-slate-100 font-sans text-slate-800">
+
+    <!-- HEADER / NAVIGATION -->
+    <header class="bg-slate-900 text-white shadow-lg sticky top-0 z-40">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
+            <div class="flex items-center space-x-3 cursor-pointer" onclick="switchToPublicView()">
+                <i class="fa-solid fa-boxes-packing text-2xl text-blue-400"></i>
+                <div>
+                    <h1 class="font-bold text-lg tracking-wide">E-REQUEST SYSTEM</h1>
+                    <p class="text-xs text-slate-400">Portal Pengajuan & Permintaan Barang Online</p>
+                </div>
+            </div>
+            
+            <div class="flex items-center space-x-4">
+                <span class="hidden sm:flex text-xs bg-emerald-500/20 text-emerald-400 px-2.5 py-1 rounded-full border border-emerald-500/30 items-center gap-1">
+                    <i class="fa-solid fa-globe text-[10px]"></i> Cloud Online Network
+                </span>
+
+                <!-- STATUS USER / NAVIGATION AREA -->
+                <div id="navUserArea">
+                    <button id="btnLoginModal" onclick="openLoginModal()" class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-4 py-2 rounded-lg shadow transition flex items-center gap-2">
+                        <i class="fa-solid fa-right-to-bracket"></i> Login Staf / Pejabat
+                    </button>
+                    
+                    <div id="loggedInUserBadge" class="hidden flex items-center gap-3">
+                        <div class="relative cursor-pointer" onclick="openUserProfileModal()">
+                            <img id="userHeaderAvatar" src="https://via.placeholder.com/150" alt="Avatar" class="w-9 h-9 rounded-full object-cover border-2 border-blue-400">
+                        </div>
+                        <div class="text-right cursor-pointer" onclick="openUserProfileModal()">
+                            <span id="userDisplayName" class="block font-bold text-xs text-blue-400">Kabag Umum</span>
+                            <span id="userDisplayRole" class="block text-[10px] text-slate-400 uppercase tracking-wider">KABAG UMUM</span>
+                        </div>
+                        <button onclick="openUserProfileModal()" class="bg-slate-800 hover:bg-slate-700 text-blue-400 text-xs p-2 rounded-lg transition" title="Pengaturan Profil">
+                            <i class="fa-solid fa-user-gear"></i>
+                        </button>
+                        <button onclick="handleLogout()" class="bg-red-600 hover:bg-red-700 text-white text-xs px-3 py-1.5 rounded-lg font-bold transition flex items-center gap-1">
+                            <i class="fa-solid fa-right-from-bracket"></i> Logout
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- CONTENT WRAPPER -->
+    <main class="max-w-7xl mx-auto px-4 py-8">
+
+        <!-- VIEW 1: PORTAL PENGAJUAN (PUBLIC / KABAG) -->
+        <div id="publicView" class="space-y-8">
+            <div class="bg-gradient-to-r from-blue-900 to-indigo-900 text-white rounded-2xl p-8 shadow-xl">
+                <h2 class="text-3xl font-extrabold mb-2">Formulir Pengajuan Permintaan Barang</h2>
+                <p class="text-blue-200 max-w-2xl text-sm leading-relaxed">
+                    Sampaikan kebutuhan barang/inventaris kerja Divisi/Unit Anda secara resmi secara terpusat.
+                </p>
+            </div>
+
+            <!-- DAFTAR PENGAJUAN YANG SUDAH DISETUJUI DIREKTUR UTAMA -->
+            <div class="bg-white rounded-xl shadow-md border border-emerald-200 overflow-hidden">
+                <div class="bg-emerald-600 text-white px-6 py-4 flex justify-between items-center">
+                    <div class="flex items-center gap-2">
+                        <i class="fa-solid fa-circle-check text-xl text-emerald-200"></i>
+                        <h3 class="font-bold text-base">Pengajuan Disetujui Direktur Utama (Siap Diproses)</h3>
+                    </div>
+                    <span id="publicApprovedCount" class="bg-emerald-800 text-emerald-100 text-xs px-3 py-1 rounded-full font-bold">0 Pengajuan</span>
+                </div>
+                
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-xs text-slate-600">
+                        <thead class="bg-emerald-50 text-emerald-900 uppercase font-bold border-b border-emerald-200">
+                            <tr>
+                                <th class="p-3">No. Pengajuan</th>
+                                <th class="p-3">Tanggal</th>
+                                <th class="p-3">Kabag Pemohon / Divisi</th>
+                                <th class="p-3">Total Item</th>
+                                <th class="p-3">Urgensi</th>
+                                <th class="p-3">Status Final</th>
+                                <th class="p-3 text-center">Cetak PDF</th>
+                            </tr>
+                        </thead>
+                        <tbody id="publicApprovedTableBody" class="divide-y divide-slate-100"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- FORMULIR INPUT UTAMA -->
+            <div class="bg-white rounded-xl shadow-md p-6 border border-slate-200">
+                <h3 class="text-lg font-bold text-slate-800 border-b pb-3 mb-6 flex items-center gap-2">
+                    <i class="fa-solid fa-cart-plus text-blue-600"></i> Buat Pengajuan Barang Baru
+                </h3>
+
+                <form id="requestForm" onsubmit="submitRequest(event)" class="space-y-6">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div>
+                            <label class="block text-sm font-semibold text-slate-700 mb-2">Nama Kabag Pemohon *</label>
+                            <input type="text" id="formPemohon" placeholder="Nama Kabag..." required class="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-slate-700 mb-2">Divisi / Unit Kerja *</label>
+                            <select id="formDivisi" required class="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                                <option value="">-- Pilih Divisi --</option>
+                                <option value="Operasional">Operasional</option>
+                                <option value="Kantor Kas">Kantor Kas</option>
+                                <option value="Lending">Lending</option>
+                                <option value="Funding">Funding</option>
+                                <option value="Penagihan">Penagihan</option>
+                                <option value="Remedial">Remedial</option>
+                                <option value="SKAI / Audit">SKAI / Audit</option>
+                                <option value="Kepatuhan">Kepatuhan</option>
+                                <option value="SDM & Umum">SDM & Umum</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-slate-700 mb-2">Tingkat Urgensi *</label>
+                            <select id="formUrgensi" required class="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                                <option value="Rendah">Rendah (Rutin)</option>
+                                <option value="Sedang">Sedang (Segera/Minggu Ini)</option>
+                                <option value="Tinggi">Tinggi / Urgent (Darurat)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- INPUT RINCIAN ITEM BARANG -->
+                    <div class="border rounded-xl p-4 bg-slate-50 space-y-3">
+                        <div class="flex justify-between items-center border-b pb-2">
+                            <label class="block text-sm font-bold text-slate-800">Daftar Barang Yang Diminta *</label>
+                            <button type="button" onclick="addBarangRow()" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-1">
+                                <i class="fa-solid fa-plus"></i> Tambah Item
+                            </button>
+                        </div>
+
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left text-xs">
+                                <thead>
+                                    <tr class="text-slate-600 border-b">
+                                        <th class="py-2 px-1 w-10 text-center">No.</th>
+                                        <th class="py-2 px-1">Nama Barang / Spesifikasi</th>
+                                        <th class="py-2 px-1 w-24">Jumlah</th>
+                                        <th class="py-2 px-1 w-32">Satuan</th>
+                                        <th class="py-2 px-1">Keterangan / Catatan Barang</th>
+                                        <th class="py-2 px-1 w-12 text-center">Aksi</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="barangTableBody">
+                                    <tr class="barang-row">
+                                        <td class="p-1 text-center font-bold text-slate-500 row-number">1</td>
+                                        <td class="p-1"><input type="text" placeholder="Contoh: Kertas A4 80gr" required class="item-nama w-full border border-slate-300 rounded p-2 text-xs bg-white"></td>
+                                        <td class="p-1"><input type="number" min="1" value="1" required class="item-qty w-full border border-slate-300 rounded p-2 text-xs bg-white"></td>
+                                        <td class="p-1">
+                                            <select class="item-satuan w-full border border-slate-300 rounded p-2 text-xs bg-white">
+                                                <option value="Rim">Rim</option>
+                                                <option value="Pcs">Pcs</option>
+                                                <option value="Box">Box</option>
+                                                <option value="Unit">Unit</option>
+                                                <option value="Pack">Pack</option>
+                                            </select>
+                                        </td>
+                                        <td class="p-1"><input type="text" placeholder="Catatan spesifik / warna / merk..." class="item-keterangan w-full border border-slate-300 rounded p-2 text-xs bg-white"></td>
+                                        <td class="p-1 text-center"><button type="button" onclick="removeBarangRow(this)" class="text-red-500 hover:text-red-700"><i class="fa-solid fa-trash"></i></button></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-2">Alasan / Justifikasi Pengajuan *</label>
+                        <textarea id="formAlasan" rows="3" placeholder="Jelaskan kebutuhan pengajuan barang ini untuk operasional apa..." required class="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"></textarea>
+                    </div>
+
+                    <div class="border-2 border-dashed border-slate-300 rounded-xl p-6 text-center bg-slate-50 space-y-3">
+                        <i class="fa-solid fa-cloud-arrow-up text-3xl text-slate-400 mb-1"></i>
+                        <p class="text-sm font-medium text-slate-700">Lampirkan Brosur / Foto Kerusakan Barang Lama (Opsional)</p>
+                        <p class="text-xs text-slate-500">Format: JPG, PNG, PDF, DOCX (Max. 20MB)</p>
+                        <input type="file" id="formFile" multiple accept="image/*,application/pdf,.doc,.docx" onchange="previewUploadFiles(this, 'uploadPreviewContainer', 'uploadPreviewList')" class="text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
+                        
+                        <div id="uploadPreviewContainer" class="hidden border-t pt-3 mt-3 text-left">
+                            <span class="text-xs font-bold text-slate-700 block mb-2">File yang dipilih untuk diunggah:</span>
+                            <div id="uploadPreviewList" class="flex flex-wrap gap-2"></div>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg shadow-md transition duration-200 flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-paper-plane"></i> Kirim Pengajuan Barang
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- VIEW 2: DASHBOARD INTERNAL -->
+        <div id="internalView" class="hidden space-y-6">
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-4 rounded-xl shadow-sm border border-slate-200">
+                <div>
+                    <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Akses Multi-Device Terhubung Cloud Database</span>
+                    <h2 id="currentRoleTitle" class="text-xl font-bold text-slate-800">Sistem Persetujuan Permintaan Barang</h2>
+                </div>
+                <div class="flex items-center gap-2 text-xs text-slate-500">
+                    <button id="btnSetupUser" onclick="openUserSetupModal()" class="hidden bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded-lg font-bold transition flex items-center gap-1.5 shadow-sm">
+                        <i class="fa-solid fa-users-gear"></i> Setup User
+                    </button>
+                    <button onclick="openUserProfileModal()" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg font-bold transition flex items-center gap-1.5 shadow-sm">
+                        <i class="fa-solid fa-user-gear"></i> Profil Saya
+                    </button>
+                    <span class="bg-slate-100 px-3 py-1.5 rounded-lg border border-slate-200"><i class="fa-solid fa-cloud-arrow-up text-blue-600"></i> Status DB: Active</span>
+                </div>
+            </div>
+
+            <!-- TAHAPAN WORKFLOW -->
+            <div class="bg-white rounded-xl shadow-sm p-6 border border-slate-200">
+                <h3 class="text-sm font-bold text-slate-700 uppercase tracking-wider mb-4 border-b pb-2 flex justify-between items-center">
+                    <span><i class="fa-solid fa-diagram-project text-blue-600 mr-2"></i> Status Tahapan Pengajuan Barang</span>
+                    <button onclick="renderTable()" class="text-xs font-normal text-blue-600 hover:underline"><i class="fa-solid fa-rotate-right"></i> Tampilkan Semua</button>
+                </h3>
+                
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4 text-center text-xs font-medium">
+                    <div class="workflow-step p-4 border-2 rounded-xl cursor-pointer hover:border-blue-400 shadow-sm" onclick="filterByStage('Menunggu Persetujuan Kabag Umum')">
+                        <i class="fa-solid fa-user-pen text-2xl text-blue-600 mb-2 block"></i> 
+                        <span class="font-bold text-slate-800 text-sm block">1. Pengajuan oleh Kabag</span>
+                        <span class="text-[11px] text-slate-500">Menunggu Verifikasi Kabag Umum</span>
+                    </div>
+                    <div class="workflow-step p-4 border-2 rounded-xl cursor-pointer hover:border-blue-400 shadow-sm" onclick="filterByStage('Menunggu Persetujuan Direktur Utama')">
+                        <i class="fa-solid fa-boxes-stacked text-2xl text-purple-600 mb-2 block"></i> 
+                        <span class="font-bold text-slate-800 text-sm block">2. Persetujuan Kabag Umum</span>
+                        <span class="text-[11px] text-slate-500">Menunggu Keputusan Dirut</span>
+                    </div>
+                    <div class="workflow-step p-4 border-2 rounded-xl cursor-pointer hover:border-blue-400 shadow-sm" onclick="filterByStage('Disetujui Direktur Utama')">
+                        <i class="fa-solid fa-user-tie text-2xl text-emerald-600 mb-2 block"></i> 
+                        <span class="font-bold text-slate-800 text-sm block">3. Persetujuan Direktur Utama</span>
+                        <span class="text-[11px] text-slate-500">Pengajuan Disetujui Final (Dapat Dicetak)</span>
+                    </div>
+                    <div class="workflow-step p-4 border-2 rounded-xl cursor-pointer hover:border-red-400 shadow-sm bg-rose-50/50" onclick="filterByStage('Ditolak')">
+                        <i class="fa-solid fa-circle-xmark text-2xl text-rose-600 mb-2 block"></i> 
+                        <span class="font-bold text-slate-800 text-sm block">4. Pengajuan Ditolak</span>
+                        <span class="text-[11px] text-slate-500">Ditolak Kabag Umum / Dirut</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- DATA TABLE -->
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                <div class="p-4 border-b border-slate-200 flex justify-between items-center bg-slate-50">
+                    <h3 class="font-bold text-slate-800 text-sm">Daftar Pengajuan Barang</h3>
+                    <div class="flex items-center gap-3">
+                        <button id="btnDeleteSelected" onclick="deleteSelected()" class="hidden bg-red-50 text-red-600 border border-red-200 hover:bg-red-600 hover:text-white px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition">
+                            <i class="fa-solid fa-trash-can"></i> Hapus Terpilih
+                        </button>
+                        <div class="text-xs font-semibold text-slate-600" id="ticketCount">Menampilkan 0 Pengajuan</div>
+                    </div>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-xs text-slate-600">
+                        <thead class="bg-slate-100 text-slate-700 uppercase font-bold border-b border-slate-200">
+                            <tr>
+                                <th id="thSelectAll" class="p-3 w-10 text-center hidden">
+                                    <input type="checkbox" id="selectAll" onclick="toggleSelectAll(this)" class="rounded border-slate-300">
+                                </th>
+                                <th class="p-3">No. Pengajuan</th>
+                                <th class="p-3">Tanggal</th>
+                                <th class="p-3">Kabag Pemohon / Divisi</th>
+                                <th class="p-3">Total Item</th>
+                                <th class="p-3">Urgensi</th>
+                                <th class="p-3">Status Tahapan Sekarang</th>
+                                <th class="p-3 text-center w-40">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="ticketTableBody" class="divide-y divide-slate-200"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- MODAL 1: AUTHENTICATION / LOGIN -->
+    <div id="loginModal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200 space-y-5">
+            <div class="flex justify-between items-center border-b pb-3">
+                <div class="flex items-center gap-2">
+                    <i class="fa-solid fa-lock text-blue-600 text-xl"></i>
+                    <h3 class="font-bold text-slate-800 text-base">Login User Internal System</h3>
+                </div>
+                <button onclick="closeLoginModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+
+            <form onsubmit="handleLoginSubmit(event)" class="space-y-4 text-xs">
+                <div>
+                    <label class="block font-bold text-slate-700 mb-1">Username / NIK</label>
+                    <input type="text" id="loginUsername" required placeholder="Masukkan Username..." class="w-full border border-slate-300 rounded-lg p-2.5 focus:ring-2 focus:ring-blue-500 focus:outline-none text-xs">
+                </div>
+
+                <div>
+                    <label class="block font-bold text-slate-700 mb-1">Kata Sandi (Password)</label>
+                    <input type="password" id="loginPassword" required placeholder="••••••••" class="w-full border border-slate-300 rounded-lg p-2.5 focus:ring-2 focus:ring-blue-500 focus:outline-none text-xs">
+                </div>
+
+                <div class="bg-slate-50 p-3 rounded-lg border border-slate-200 space-y-2">
+                    <label class="block font-bold text-slate-700">Kode Keamanan (CAPTCHA)</label>
+                    <div class="flex items-center gap-3">
+                        <span id="captchaCode" class="bg-slate-800 text-yellow-400 font-mono font-bold tracking-widest text-base px-3 py-1 rounded select-none">8A3F</span>
+                        <button type="button" onclick="generateCaptcha()" class="text-blue-600 hover:underline text-[11px]"><i class="fa-solid fa-rotate"></i> Acak Kode</button>
+                    </div>
+                    <input type="text" id="loginCaptchaInput" required placeholder="Ketik 4 karakter kode di atas" class="w-full border border-slate-300 rounded-lg p-2 focus:outline-none bg-white uppercase text-xs">
+                </div>
+
+                <div class="flex justify-end gap-2 border-t pt-3">
+                    <button type="button" onclick="closeLoginModal()" class="px-4 py-2 rounded-lg bg-slate-200 text-slate-700 font-semibold text-xs hover:bg-slate-300">Batal</button>
+                    <button type="submit" class="px-5 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow flex items-center gap-1.5">
+                        <i class="fa-solid fa-key"></i> Masuk Sekarang
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL 2: DETAIL WORKFLOW & APPROVAL -->
+    <div id="workflowModal" class="hidden fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-3xl w-full p-6 shadow-2xl border border-slate-200 space-y-4 max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center border-b pb-3">
+                <h3 class="font-bold text-slate-800 text-lg flex items-center gap-2">
+                    <i class="fa-solid fa-box-open text-blue-600"></i> Detail Pengajuan: <span id="modalTicketId" class="text-blue-600"></span>
+                </h3>
+                <button onclick="closeDetailModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+
+            <div class="space-y-4 text-xs">
+                <div class="bg-blue-50 p-3.5 rounded-lg text-blue-900 space-y-3 border border-blue-100">
+                    <p id="modalDetailContent" class="text-slate-700 leading-relaxed"></p>
+                    
+                    <div>
+                        <span class="font-bold text-slate-800 block mb-1">Rincian Item Barang:</span>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left bg-white rounded border border-slate-200 text-[11px]">
+                                <thead class="bg-slate-100 font-bold border-b">
+                                    <tr>
+                                        <th class="p-2 w-10 text-center">No.</th>
+                                        <th class="p-2">Nama Barang</th>
+                                        <th class="p-2 w-20">Qty</th>
+                                        <th class="p-2 w-24">Satuan</th>
+                                        <th class="p-2">Keterangan</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="modalBarangList" class="divide-y"></tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div>
+                        <span class="font-bold text-slate-800 block mb-1">Dokumen Lampiran:</span>
+                        <div id="modalFilesContainer" class="flex flex-wrap gap-2"></div>
+                    </div>
+
+                    <div>
+                        <span class="font-bold text-slate-800 block mb-1">Riwayat Catatan Persetujuan:</span>
+                        <ul id="modalHistoryNotes" class="list-disc pl-5 text-slate-600 space-y-1"></ul>
+                    </div>
+                </div>
+
+                <div class="bg-slate-50 p-3 rounded-lg border border-slate-200 space-y-2">
+                    <label class="font-bold text-slate-700 block flex items-center gap-1.5">
+                        <i class="fa-solid fa-paperclip text-blue-600"></i> Lampirkan Dokumen Pendukung Baru:
+                    </label>
+                    <input type="file" id="modalProcessFile" multiple accept="image/*,application/pdf" class="w-full text-xs text-slate-500 file:mr-4 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-blue-100 file:text-blue-700 hover:file:bg-blue-200">
+                </div>
+
+                <div>
+                    <label class="font-bold text-slate-700 block mb-1">Catatan Persetujuan / Penolakan:</label>
+                    <textarea id="modalNoteInput" rows="3" placeholder="Masukkan alasan atau catatan persetujuan/penolakan..." class="w-full border border-slate-300 rounded p-2 text-xs focus:ring-1 focus:ring-blue-500"></textarea>
+                </div>
+
+                <!-- PANEL AKSI -->
+                <div id="actionButtonsContainer" class="space-y-3 pt-2">
+                    <div id="kabagUmumActionArea" class="hidden bg-purple-50 border border-purple-200 p-4 rounded-xl flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
+                        <div>
+                            <span class="font-bold text-purple-900 text-xs block">2. Persetujuan Kabag Umum</span>
+                            <p class="text-[11px] text-purple-700">Setujui untuk meneruskan pengajuan ke Direktur Utama</p>
+                        </div>
+                        <div id="kabagUmumButtons" class="flex gap-2 w-full md:w-auto">
+                            <button type="button" onclick="processDecision('Menunggu Persetujuan Direktur Utama', 'Kabag Umum', 'disetujui')" class="flex-1 md:flex-none bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-4 py-2 rounded-lg text-xs shadow flex items-center justify-center gap-1.5">
+                                <i class="fa-solid fa-circle-check"></i> Setuju & Teruskan ke Dirut
+                            </button>
+                            <button type="button" onclick="processDecision('Ditolak Kabag Umum', 'Kabag Umum', 'ditolak')" class="flex-1 md:flex-none bg-red-600 hover:bg-red-700 text-white font-bold px-4 py-2 rounded-lg text-xs shadow flex items-center justify-center gap-1.5">
+                                <i class="fa-solid fa-circle-xmark"></i> Tolak Pengajuan
+                            </button>
+                        </div>
+                        <div id="kabagUmumRestricted" class="hidden text-xs text-red-600 font-semibold italic">
+                            <i class="fa-solid fa-triangle-exclamation"></i> Harus di otorisasi dulu oleh Kabag Umum.
+                        </div>
+                    </div>
+
+                    <div id="dirutActionArea" class="hidden bg-emerald-50 border border-emerald-200 p-4 rounded-xl flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
+                        <div>
+                            <span class="font-bold text-emerald-900 text-xs block">3. Persetujuan Direktur Utama</span>
+                            <p class="text-[11px] text-emerald-700">Keputusan akhir persetujuan oleh Direktur Utama</p>
+                        </div>
+                        <div id="dirutButtons" class="flex gap-2 w-full md:w-auto">
+                            <button type="button" onclick="processDecision('Disetujui Direktur Utama', 'Direktur Utama', 'disetujui')" class="flex-1 md:flex-none bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-4 py-2 rounded-lg text-xs shadow flex items-center justify-center gap-1.5">
+                                <i class="fa-solid fa-circle-check"></i> Setuju (Selesai/Final)
+                            </button>
+                            <button type="button" onclick="processDecision('Ditolak Direktur Utama', 'Direktur Utama', 'ditolak')" class="flex-1 md:flex-none bg-red-600 hover:bg-red-700 text-white font-bold px-4 py-2 rounded-lg text-xs shadow flex items-center justify-center gap-1.5">
+                                <i class="fa-solid fa-circle-xmark"></i> Tolak Pengajuan
+                            </button>
+                        </div>
+                        <div id="dirutRestricted" class="hidden text-xs text-red-600 font-semibold italic">
+                            <i class="fa-solid fa-triangle-exclamation"></i> Harus di otorisasi oleh Direktur Utama.
+                        </div>
+                    </div>
+
+                    <div id="completedActionArea" class="hidden bg-emerald-50 border border-emerald-300 p-4 rounded-xl flex flex-col sm:flex-row justify-between items-center gap-3">
+                        <div class="flex items-center gap-2 text-emerald-800 text-xs font-semibold">
+                            <i class="fa-solid fa-circle-check text-emerald-600 text-lg"></i>
+                            <span>Pengajuan disetujui penuh oleh Direktur Utama. Formulir siap dicetak.</span>
+                        </div>
+                        <button id="btnPrintPdf" onclick="printTicketPDF()" class="w-full sm:w-auto bg-amber-500 hover:bg-amber-600 text-white font-bold px-4 py-2 rounded-lg text-xs shadow-md transition flex items-center justify-center gap-1.5">
+                            <i class="fa-solid fa-file-pdf text-sm"></i> Cetak PDF (Form Disetujui)
+                        </button>
+                    </div>
+
+                    <div id="rejectedActionArea" class="hidden bg-rose-50 border border-rose-200 p-3 rounded-xl text-center text-rose-700 font-semibold text-xs">
+                        <i class="fa-solid fa-circle-xmark text-rose-600 mr-1"></i> Pengajuan ini telah ditolak dan tidak dapat diproses/dicetak.
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex justify-end items-center border-t pt-4 w-full">
+                <button onclick="closeDetailModal()" class="px-5 py-2 rounded-lg bg-slate-200 text-slate-700 font-semibold text-xs hover:bg-slate-300 transition">Tutup</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL 3: SETUP USER MANAGEMENT -->
+    <div id="userSetupModal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-4xl w-full p-6 shadow-2xl border border-slate-200 space-y-5 max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center border-b pb-3">
+                <div class="flex items-center gap-2">
+                    <i class="fa-solid fa-users-gear text-indigo-600 text-xl"></i>
+                    <h3 class="font-bold text-slate-800 text-base">Setup Management User System</h3>
+                </div>
+                <button onclick="closeUserSetupModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+
+            <form onsubmit="handleCreateUser(event)" class="bg-indigo-50/60 p-4 rounded-xl border border-indigo-100 space-y-3 text-xs">
+                <h4 class="font-bold text-indigo-900 flex items-center gap-1.5 text-xs">
+                    <i class="fa-solid fa-user-plus text-indigo-600"></i> Tambah Akun Pengguna Baru
+                </h4>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+                    <div>
+                        <label class="block font-semibold text-slate-700 mb-1">Username / NIK *</label>
+                        <input type="text" id="newUserUsername" required placeholder="Contoh: user123" class="w-full border border-slate-300 rounded-lg p-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none bg-white">
+                    </div>
+                    <div>
+                        <label class="block font-semibold text-slate-700 mb-1">Nama Lengkap *</label>
+                        <input type="text" id="newUserName" required placeholder="Contoh: Budi Santoso" class="w-full border border-slate-300 rounded-lg p-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none bg-white">
+                    </div>
+                    <div>
+                        <label class="block font-semibold text-slate-700 mb-1">Kata Sandi (Password) *</label>
+                        <input type="password" id="newUserPassword" required placeholder="••••••••" class="w-full border border-slate-300 rounded-lg p-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none bg-white">
+                    </div>
+                    <div>
+                        <label class="block font-semibold text-slate-700 mb-1">Role / Jabatan *</label>
+                        <select id="newUserRole" required class="w-full border border-slate-300 rounded-lg p-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none bg-white">
+                            <option value="superadmin">Super Admin</option>
+                            <option value="kabag_umum">Kabag Umum</option>
+                            <option value="dirut">Direktur Utama</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="flex justify-end pt-1">
+                    <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-4 py-2 rounded-lg shadow transition flex items-center gap-1.5 text-xs">
+                        <i class="fa-solid fa-plus"></i> Tambah Pengguna
+                    </button>
+                </div>
+            </form>
+
+            <div class="space-y-2">
+                <h4 class="font-bold text-slate-800 text-xs">Daftar Pengguna Terdaftar:</h4>
+                <div class="overflow-x-auto border rounded-xl">
+                    <table class="w-full text-left text-xs">
+                        <thead class="bg-slate-100 text-slate-700 font-bold border-b">
+                            <tr>
+                                <th class="p-2.5">Foto</th>
+                                <th class="p-2.5">Username</th>
+                                <th class="p-2.5">Nama</th>
+                                <th class="p-2.5">Role</th>
+                                <th class="p-2.5 text-center">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="userTableBody" class="divide-y"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL 4: UPDATE PASSWORD USER (ADMIN) -->
+    <div id="changePasswordModal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200">
+            <div class="flex justify-between items-center border-b pb-3 mb-5">
+                <div class="flex items-center gap-2">
+                    <i class="fa-solid fa-key text-indigo-600 text-xl"></i>
+                    <div>
+                        <h3 class="font-bold text-slate-800 text-base">Update Password User</h3>
+                        <p class="text-[10px] text-slate-500">Perubahan password oleh Super Admin</p>
+                    </div>
+                </div>
+                <button type="button" onclick="closeChangePasswordModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+
+            <form onsubmit="handleChangePassword(event)" class="space-y-4 text-xs">
+                <input type="hidden" id="changePasswordUserIndex">
+                <div>
+                    <label class="block font-bold text-slate-700 mb-1">Username / NIK</label>
+                    <input type="text" id="changePasswordUsername" readonly class="w-full border border-slate-300 rounded-lg p-2.5 bg-slate-100 text-slate-600 font-bold">
+                </div>
+                <div>
+                    <label class="block font-bold text-slate-700 mb-1">Nama User</label>
+                    <input type="text" id="changePasswordName" readonly class="w-full border border-slate-300 rounded-lg p-2.5 bg-slate-100 text-slate-600">
+                </div>
+                <div>
+                    <label class="block font-bold text-slate-700 mb-1">Password Baru *</label>
+                    <div class="relative">
+                        <input type="password" id="changePasswordNew" required minlength="8" autocomplete="new-password" placeholder="Minimal 8 karakter" class="w-full border border-slate-300 rounded-lg p-2.5 pr-10 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                        <button type="button" onclick="togglePasswordVisibility('changePasswordNew', this)" class="absolute right-3 top-2.5 text-slate-400"><i class="fa-solid fa-eye"></i></button>
+                    </div>
+                </div>
+                <div>
+                    <label class="block font-bold text-slate-700 mb-1">Konfirmasi Password Baru *</label>
+                    <div class="relative">
+                        <input type="password" id="changePasswordConfirm" required minlength="8" autocomplete="new-password" placeholder="Ulangi password baru" class="w-full border border-slate-300 rounded-lg p-2.5 pr-10 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                        <button type="button" onclick="togglePasswordVisibility('changePasswordConfirm', this)" class="absolute right-3 top-2.5 text-slate-400"><i class="fa-solid fa-eye"></i></button>
+                    </div>
+                </div>
+                <div class="bg-amber-50 border border-amber-200 rounded-lg p-3 text-amber-800">
+                    <div class="flex gap-2"><i class="fa-solid fa-circle-info mt-0.5"></i><div><strong>Perhatian</strong><p class="mt-1 text-[11px]">Password lama akan diganti dengan password baru.</p></div></div>
+                </div>
+                <div class="flex justify-end gap-2 border-t pt-4">
+                    <button type="button" onclick="closeChangePasswordModal()" class="px-4 py-2 rounded-lg bg-slate-200 text-slate-700 font-semibold">Batal</button>
+                    <button type="submit" class="px-5 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-bold shadow flex items-center gap-1.5"><i class="fa-solid fa-key"></i> Update Password</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL 5: USER PROFILE & SETTINGS -->
+    <div id="userProfileModal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200">
+            <div class="flex justify-between items-center border-b pb-3 mb-5">
+                <div class="flex items-center gap-2">
+                    <i class="fa-solid fa-id-card text-blue-600 text-xl"></i>
+                    <div>
+                        <h3 class="font-bold text-slate-800 text-base">Pengaturan Profil Pengguna</h3>
+                        <p class="text-[10px] text-slate-500">Kelola informasi diri Anda</p>
+                    </div>
+                </div>
+                <button type="button" onclick="closeUserProfileModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+
+            <form onsubmit="handleSaveUserProfile(event)" class="space-y-4 text-xs">
+                <div class="flex flex-col items-center justify-center space-y-2">
+                    <div class="relative group cursor-pointer" onclick="document.getElementById('profileAvatarInput').click()">
+                        <img id="profileAvatarPreview" src="https://via.placeholder.com/150" alt="Foto Profil" class="w-24 h-24 rounded-full object-cover border-4 border-blue-500 shadow-md">
+                        <div class="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition">
+                            <i class="fa-solid fa-camera text-white text-xl"></i>
+                        </div>
+                    </div>
+                    <input type="file" id="profileAvatarInput" accept="image/*" onchange="previewProfileAvatar(this)" class="hidden">
+                    <span class="text-[11px] text-slate-500">Klik foto untuk mengganti</span>
+                </div>
+
+                <div>
+                    <label class="block font-bold text-slate-700 mb-1">Username / NIK</label>
+                    <input type="text" id="profileUsername" readonly class="w-full border border-slate-300 rounded-lg p-2.5 bg-slate-100 text-slate-500 font-semibold cursor-not-allowed">
+                </div>
+
+                <div>
+                    <label class="block font-bold text-slate-700 mb-1">Nama Lengkap *</label>
+                    <input type="text" id="profileName" required class="w-full border border-slate-300 rounded-lg p-2.5 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                </div>
+
+                <div class="border-t pt-3 space-y-3">
+                    <span class="block font-bold text-slate-800 text-xs">Ubah Kata Sandi (Opsional)</span>
+                    
+                    <div>
+                        <label class="block font-bold text-slate-700 mb-1">Password Baru</label>
+                        <div class="relative">
+                            <input type="password" id="profileNewPassword" minlength="8" placeholder="Minimal 8 karakter" class="w-full border border-slate-300 rounded-lg p-2.5 pr-10 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                            <button type="button" onclick="togglePasswordVisibility('profileNewPassword', this)" class="absolute right-3 top-2.5 text-slate-400"><i class="fa-solid fa-eye"></i></button>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block font-bold text-slate-700 mb-1">Konfirmasi Password Baru</label>
+                        <div class="relative">
+                            <input type="password" id="profileConfirmPassword" minlength="8" placeholder="Ulangi password baru" class="w-full border border-slate-300 rounded-lg p-2.5 pr-10 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                            <button type="button" onclick="togglePasswordVisibility('profileConfirmPassword', this)" class="absolute right-3 top-2.5 text-slate-400"><i class="fa-solid fa-eye"></i></button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex justify-end gap-2 border-t pt-4">
+                    <button type="button" onclick="closeUserProfileModal()" class="px-4 py-2 rounded-lg bg-slate-200 text-slate-700 font-semibold">Batal</button>
+                    <button type="submit" class="px-5 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold shadow flex items-center gap-1.5"><i class="fa-solid fa-floppy-disk"></i> Simpan Perubahan</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- AREA CETAK LAPORAN -->
+    <div id="printArea" class="hidden text-black bg-white">
+        <div id="printContent"></div>
+    </div>
+
+    <!-- JAVASCRIPT SYSTEM ENGINE -->
+    <script>
+        // CONFIGURATION (Dapatkan URL/Endpoints dari environment atau REST API backend)
+        const API_BASE_URL = window.location.origin + '/api';
+
+        function getCurrentDateTime() {
+            const now = new Date();
+            const dateStr = now.toLocaleDateString('id-ID', { day: '2-digit', month: '2-digit', year: 'numeric' });
+            const timeStr = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }).replace(':', '.');
+            return `${dateStr}, ${timeStr} WIB`;
+        }
+
+        function updateRowNumbers() {
+            const rowNumbers = document.querySelectorAll('#barangTableBody .row-number');
+            rowNumbers.forEach((td, index) => {
+                td.innerText = index + 1;
+            });
+        }
+
+        const DEFAULT_AVATAR = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2394a3b8'%3E%3Cpath d='M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z'/%3E%3C/svg%3E";
+
+        const defaultUsers = [
+            { username: 'admin', name: 'Super Administrator', role: 'superadmin', pass: 'admin123', avatar: DEFAULT_AVATAR },
+            { username: 'umum', name: 'Santi', role: 'kabag_umum', pass: 'umum123', avatar: DEFAULT_AVATAR },
+            { username: 'dirut', name: 'Matius', role: 'dirut', pass: 'dirut123', avatar: DEFAULT_AVATAR }
+        ];
+
+        let users = [];
+        let requests = [];
+        let currentUser = null;
+        let activeTicketId = null;
+
+        async function fetchCloudData() {
+            try {
+                loadFromLocalStorage();
+            } catch (err) {
+                console.warn('Gagal memuat data:', err);
+            }
+            renderPublicApprovedTable();
+            if (!document.getElementById('internalView').classList.contains('hidden')) {
+                renderTable();
+            }
+        }
+
+        async function syncToCloud() {
+            localStorage.setItem('e_req_users', JSON.stringify(users));
+            localStorage.setItem('e_req_requests', JSON.stringify(requests));
+        }
+
+        function loadFromLocalStorage() {
+            const savedUsers = localStorage.getItem('e_req_users');
+            users = savedUsers ? JSON.parse(savedUsers) : defaultUsers;
+            const savedRequests = localStorage.getItem('e_req_requests');
+            requests = savedRequests ? JSON.parse(savedRequests) : [];
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            fetchCloudData();
+        });
+
+        function renderPublicApprovedTable() {
+            const tbody = document.getElementById('publicApprovedTableBody');
+            const countLabel = document.getElementById('publicApprovedCount');
+            tbody.innerHTML = '';
+
+            const approvedData = requests.filter(r => r.stage === 'Disetujui Direktur Utama');
+            countLabel.innerText = `${approvedData.length} Pengajuan`;
+
+            if (approvedData.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="7" class="text-center p-4 text-slate-400 italic">Belum ada pengajuan yang disetujui Direktur Utama.</td></tr>`;
+                return;
+            }
+
+            approvedData.forEach(item => {
+                let urgencyBadge = 'bg-slate-100 text-slate-700';
+                if(item.urgensi === 'Tinggi') urgencyBadge = 'bg-red-100 text-red-700 font-bold';
+                else if(item.urgensi === 'Sedang') urgencyBadge = 'bg-amber-100 text-amber-700';
+
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-emerald-50/50 transition border-b';
+                tr.innerHTML = `
+                    <td class="p-3 font-bold text-blue-600">${item.id}</td>
+                    <td class="p-3">${item.tanggal}</td>
+                    <td class="p-3 font-semibold">${item.pemohon} <br><span class="text-[10px] text-slate-400 font-normal">${item.divisi}</span></td>
+                    <td class="p-3"><span class="bg-blue-100 text-blue-800 text-[10px] px-2 py-0.5 rounded-full font-bold">${item.items.length} Item</span></td>
+                    <td class="p-3"><span class="text-[10px] px-2 py-0.5 rounded ${urgencyBadge}">${item.urgensi}</span></td>
+                    <td class="p-3"><span class="font-bold px-2.5 py-1 rounded-full text-[11px] bg-emerald-100 text-emerald-800 border border-emerald-300">Disetujui Dirut</span></td>
+                    <td class="p-3 text-center">
+                        <button onclick="printDirectPDF('${item.id}')" class="bg-amber-500 hover:bg-amber-600 text-white text-[11px] px-3 py-1.5 rounded-lg font-bold shadow flex items-center justify-center gap-1 mx-auto transition">
+                            <i class="fa-solid fa-file-pdf"></i> Cetak PDF
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function printDirectPDF(id) {
+            activeTicketId = id;
+            printTicketPDF();
+        }
+
+        function addBarangRow() {
+            const tbody = document.getElementById('barangTableBody');
+            const tr = document.createElement('tr');
+            tr.className = 'barang-row';
+            tr.innerHTML = `
+                <td class="p-1 text-center font-bold text-slate-500 row-number"></td>
+                <td class="p-1"><input type="text" placeholder="Nama barang..." required class="item-nama w-full border border-slate-300 rounded p-2 text-xs bg-white"></td>
+                <td class="p-1"><input type="number" min="1" value="1" required class="item-qty w-full border border-slate-300 rounded p-2 text-xs bg-white"></td>
+                <td class="p-1">
+                    <select class="item-satuan w-full border border-slate-300 rounded p-2 text-xs bg-white">
+                        <option value="Rim">Rim</option>
+                        <option value="Pcs">Pcs</option>
+                        <option value="Box">Box</option>
+                        <option value="Unit">Unit</option>
+                        <option value="Pack">Pack</option>
+                    </select>
+                </td>
+                <td class="p-1"><input type="text" placeholder="Catatan spesifik / warna / merk..." class="item-keterangan w-full border border-slate-300 rounded p-2 text-xs bg-white"></td>
+                <td class="p-1 text-center"><button type="button" onclick="removeBarangRow(this)" class="text-red-500 hover:text-red-700"><i class="fa-solid fa-trash"></i></button></td>
+            `;
+            tbody.appendChild(tr);
+            updateRowNumbers();
+        }
+
+        function removeBarangRow(btn) {
+            const rows = document.querySelectorAll('.barang-row');
+            if (rows.length > 1) {
+                btn.closest('tr').remove();
+                updateRowNumbers();
+            } else {
+                alert('Minimal 1 barang harus diisi!');
+            }
+        }
+
+        function openLoginModal() {
+            generateCaptcha();
+            document.getElementById('loginModal').classList.remove('hidden');
+        }
+
+        function closeLoginModal() {
+            document.getElementById('loginModal').classList.add('hidden');
+        }
+
+        function generateCaptcha() {
+            const chars = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+            let captcha = '';
+            for (let i = 0; i < 4; i++) {
+                captcha += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            document.getElementById('captchaCode').innerText = captcha;
+        }
+
+        function handleLoginSubmit(e) {
+            e.preventDefault();
+            const u = document.getElementById('loginUsername').value;
+            const p = document.getElementById('loginPassword').value;
+            const cap = document.getElementById('loginCaptchaInput').value.toUpperCase();
+            const targetCap = document.getElementById('captchaCode').innerText;
+
+            if (cap !== targetCap) {
+                alert('Kode Captcha Salah!');
+                generateCaptcha();
+                return;
+            }
+
+            const found = users.find(x => x.username === u && x.pass === p);
+            if (found) {
+                currentUser = found;
+                closeLoginModal();
+                updateUIForLoggedInUser();
+                switchToInternalView();
+            } else {
+                alert('Username atau Password tidak terdaftar!');
+            }
+        }
+
+        function handleLogout() {
+            currentUser = null;
+            document.getElementById('loggedInUserBadge').classList.add('hidden');
+            document.getElementById('btnLoginModal').classList.remove('hidden');
+            switchToPublicView();
+        }
+
+        function updateUIForLoggedInUser() {
+            document.getElementById('btnLoginModal').classList.add('hidden');
+            document.getElementById('loggedInUserBadge').classList.remove('hidden');
+            document.getElementById('userDisplayName').innerText = currentUser.name;
+            document.getElementById('userDisplayRole').innerText = currentUser.role;
+            document.getElementById('userHeaderAvatar').src = currentUser.avatar || DEFAULT_AVATAR;
+
+            const btnSetup = document.getElementById('btnSetupUser');
+            const thSelectAll = document.getElementById('thSelectAll');
+            
+            if (currentUser.role === 'superadmin') {
+                btnSetup.classList.remove('hidden');
+                thSelectAll.classList.remove('hidden');
+            } else {
+                btnSetup.classList.add('hidden');
+                thSelectAll.classList.add('hidden');
+            }
+        }
+
+        function switchToPublicView() {
+            document.getElementById('publicView').classList.remove('hidden');
+            document.getElementById('internalView').classList.add('hidden');
+            renderPublicApprovedTable();
+        }
+
+        function switchToInternalView() {
+            if (!currentUser) return;
+            document.getElementById('publicView').classList.add('hidden');
+            document.getElementById('internalView').classList.remove('hidden');
+            renderTable();
+        }
+
+        function previewUploadFiles(input, containerId, listId) {
+            const container = document.getElementById(containerId);
+            const list = document.getElementById(listId);
+            list.innerHTML = '';
+
+            if (input.files && input.files.length > 0) {
+                container.classList.remove('hidden');
+                Array.from(input.files).forEach(f => {
+                    const badge = document.createElement('span');
+                    badge.className = 'inline-flex items-center gap-1 bg-slate-200 text-slate-700 px-2.5 py-1 rounded-md text-[11px] font-medium';
+                    badge.innerHTML = `<i class="fa-solid fa-file text-blue-600"></i> ${f.name} (${(f.size/1024).toFixed(1)} KB)`;
+                    list.appendChild(badge);
+                });
+            } else {
+                container.classList.add('hidden');
+            }
+        }
+
+        async function submitRequest(e) {
+            e.preventDefault();
+            const id = 'REQ-' + new Date().getFullYear() + '-' + String(requests.length + 1).padStart(3, '0');
+            const fileInput = document.getElementById('formFile');
+            const files = Array.from(fileInput.files).map(f => f.name);
+
+            const items = [];
+            const rows = document.querySelectorAll('.barang-row');
+            rows.forEach(r => {
+                items.push({
+                    nama: r.querySelector('.item-nama').value,
+                    qty: parseInt(r.querySelector('.item-qty').value) || 1,
+                    satuan: r.querySelector('.item-satuan').value,
+                    keterangan: r.querySelector('.item-keterangan').value || '-'
+                });
+            });
+
+            const dateTimeNow = getCurrentDateTime();
+
+            const newReq = {
+                id: id,
+                tanggal: new Date().toISOString().split('T')[0],
+                pemohon: document.getElementById('formPemohon').value,
+                divisi: document.getElementById('formDivisi').value,
+                urgensi: document.getElementById('formUrgensi').value,
+                alasan: document.getElementById('formAlasan').value,
+                items: items,
+                files: files,
+                stage: 'Menunggu Persetujuan Kabag Umum',
+                actor: 'Kabag Pemohon',
+                notes: [`[${dateTimeNow} - Kabag Pemohon] Formulir berhasil diinput.`]
+            };
+
+            requests.push(newReq);
+            await syncToCloud();
+
+            alert(`Pengajuan Berhasil Dibuat! Nomor Pengajuan: ${id}`);
+            document.getElementById('requestForm').reset();
+            
+            document.getElementById('barangTableBody').innerHTML = `
+                <tr class="barang-row">
+                    <td class="p-1 text-center font-bold text-slate-500 row-number">1</td>
+                    <td class="p-1"><input type="text" placeholder="Contoh: Kertas A4 80gr" required class="item-nama w-full border border-slate-300 rounded p-2 text-xs bg-white"></td>
+                    <td class="p-1"><input type="number" min="1" value="1" required class="item-qty w-full border border-slate-300 rounded p-2 text-xs bg-white"></td>
+                    <td class="p-1">
+                        <select class="item-satuan w-full border border-slate-300 rounded p-2 text-xs bg-white">
+                            <option value="Rim">Rim</option>
+                            <option value="Pcs">Pcs</option>
+                            <option value="Box">Box</option>
+                            <option value="Unit">Unit</option>
+                            <option value="Pack">Pack</option>
+                        </select>
+                    </td>
+                    <td class="p-1"><input type="text" placeholder="Catatan spesifik / warna / merk..." class="item-keterangan w-full border border-slate-300 rounded p-2 text-xs bg-white"></td>
+                    <td class="p-1 text-center"><button type="button" onclick="removeBarangRow(this)" class="text-red-500 hover:text-red-700"><i class="fa-solid fa-trash"></i></button></td>
+                </tr>
+            `;
+            document.getElementById('uploadPreviewContainer').classList.add('hidden');
+            renderPublicApprovedTable();
+        }
+
+        function renderTable(filterKeyword = null) {
+            const tbody = document.getElementById('ticketTableBody');
+            tbody.innerHTML = '';
+
+            let data = requests;
+            if (filterKeyword) {
+                const kw = filterKeyword.toLowerCase();
+                data = requests.filter(r => 
+                    r.stage.toLowerCase().includes(kw) || 
+                    r.pemohon.toLowerCase().includes(kw) || 
+                    r.divisi.toLowerCase().includes(kw) || 
+                    r.id.toLowerCase().includes(kw)
+                );
+            }
+
+            document.getElementById('ticketCount').innerText = `Menampilkan ${data.length} Pengajuan`;
+
+            if (data.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="8" class="text-center p-4 text-slate-400 italic">Belum ada data pengajuan.</td></tr>`;
+                return;
+            }
+
+            data.forEach(item => {
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-slate-50 transition border-b';
+
+                let selectCol = '';
+                if (currentUser && currentUser.role === 'superadmin') {
+                    selectCol = `<td class="p-3 text-center"><input type="checkbox" class="ticket-checkbox" value="${item.id}" onclick="checkSelected()"></td>`;
+                }
+
+                let urgencyBadge = 'bg-slate-100 text-slate-700';
+                if(item.urgensi === 'Tinggi') urgencyBadge = 'bg-red-100 text-red-700 font-bold';
+                else if(item.urgensi === 'Sedang') urgencyBadge = 'bg-amber-100 text-amber-700';
+
+                let stageBadge = 'bg-blue-100 text-blue-800';
+                if (item.stage.includes('Disetujui Direktur Utama')) {
+                    stageBadge = 'bg-emerald-100 text-emerald-800 font-bold border border-emerald-300';
+                } else if (item.stage.includes('Direktur Utama')) {
+                    stageBadge = 'bg-purple-100 text-purple-800 font-bold border border-purple-300';
+                } else if (item.stage.includes('Ditolak')) {
+                    stageBadge = 'bg-rose-100 text-rose-800 font-bold border border-rose-300';
+                }
+
+                let deleteSingleBtn = '';
+                if (currentUser && currentUser.role === 'superadmin') {
+                    deleteSingleBtn = `
+                        <button onclick="deleteSingleRequest('${item.id}')" class="bg-red-50 hover:bg-red-600 text-red-600 hover:text-white border border-red-200 text-[11px] px-2.5 py-1.5 rounded-lg font-bold shadow transition" title="Hapus Pengajuan">
+                            <i class="fa-solid fa-trash-can"></i>
+                        </button>
+                    `;
+                }
+
+                tr.innerHTML = `
+                    ${selectCol}
+                    <td class="p-3 font-bold text-blue-600">${item.id}</td>
+                    <td class="p-3">${item.tanggal}</td>
+                    <td class="p-3 font-semibold">${item.pemohon} <br><span class="text-[10px] text-slate-400 font-normal">${item.divisi}</span></td>
+                    <td class="p-3"><span class="bg-blue-100 text-blue-800 text-[10px] px-2 py-0.5 rounded-full font-bold">${item.items.length} Item</span></td>
+                    <td class="p-3"><span class="text-[10px] px-2 py-0.5 rounded ${urgencyBadge}">${item.urgensi}</span></td>
+                    <td class="p-3"><span class="font-semibold px-2.5 py-1 rounded-full text-[11px] ${stageBadge}">${item.stage}</span></td>
+                    <td class="p-3 text-center">
+                        <div class="flex items-center justify-center gap-1.5 mx-auto">
+                            <button onclick="openDetailModal('${item.id}')" class="bg-blue-600 hover:bg-blue-700 text-white text-[11px] px-3 py-1.5 rounded-lg font-bold shadow flex items-center justify-center gap-1">
+                                <i class="fa-solid fa-folder-open"></i> Diproses
+                            </button>
+                            ${deleteSingleBtn}
+                        </div>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        async function deleteSingleRequest(id) {
+            if (!currentUser || currentUser.role !== 'superadmin') {
+                alert('Akses ditolak!');
+                return;
+            }
+
+            if (confirm(`Hapus pengajuan "${id}"?`)) {
+                requests = requests.filter(r => r.id !== id);
+                await syncToCloud();
+                renderTable();
+                renderPublicApprovedTable();
+            }
+        }
+
+        function filterByStage(stage) {
+            renderTable(stage);
+        }
+
+        function openDetailModal(id) {
+            activeTicketId = id;
+            const r = requests.find(x => x.id === id);
+            if (!r) return;
+
+            document.getElementById('modalTicketId').innerText = r.id;
+            document.getElementById('modalDetailContent').innerHTML = `
+                <strong>Kabag Pemohon:</strong> ${r.pemohon} (${r.divisi})<br>
+                <strong>Tanggal Pengajuan:</strong> ${r.tanggal}<br>
+                <strong>Tingkat Urgensi:</strong> ${r.urgensi}<br>
+                <strong>Alasan / Justifikasi:</strong> ${r.alasan}
+            `;
+
+            const modalBarangList = document.getElementById('modalBarangList');
+            modalBarangList.innerHTML = '';
+            r.items.forEach((it, idx) => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td class="p-2 text-center font-bold text-slate-500">${idx + 1}</td>
+                    <td class="p-2 font-medium">${it.nama}</td>
+                    <td class="p-2 font-bold">${it.qty}</td>
+                    <td class="p-2">${it.satuan}</td>
+                    <td class="p-2 text-slate-600">${it.keterangan || '-'}</td>
+                `;
+                modalBarangList.appendChild(tr);
+            });
+
+            const filesContainer = document.getElementById('modalFilesContainer');
+            filesContainer.innerHTML = '';
+            if (r.files && r.files.length > 0) {
+                r.files.forEach(f => {
+                    const el = document.createElement('span');
+                    el.className = 'bg-white border text-slate-700 text-[11px] px-2.5 py-1 rounded-md font-medium shadow-sm flex items-center gap-1.5';
+                    el.innerHTML = `<i class="fa-solid fa-paperclip text-blue-600"></i> ${f}`;
+                    filesContainer.appendChild(el);
+                });
+            } else {
+                filesContainer.innerHTML = '<span class="text-slate-400 italic">Tidak ada lampiran</span>';
+            }
+
+            const historyContainer = document.getElementById('modalHistoryNotes');
+            historyContainer.innerHTML = '';
+            if(r.notes && r.notes.length > 0) {
+                r.notes.forEach(n => {
+                    const li = document.createElement('li');
+                    li.innerText = n;
+                    historyContainer.appendChild(li);
+                });
+            }
+
+            document.getElementById('modalNoteInput').value = '';
+
+            const kabagUmumArea = document.getElementById('kabagUmumActionArea');
+            const dirutArea = document.getElementById('dirutActionArea');
+            const completedArea = document.getElementById('completedActionArea');
+            const rejectedArea = document.getElementById('rejectedActionArea');
+
+            const kabagUmumButtons = document.getElementById('kabagUmumButtons');
+            const kabagUmumRestricted = document.getElementById('kabagUmumRestricted');
+            const dirutButtons = document.getElementById('dirutButtons');
+            const dirutRestricted = document.getElementById('dirutRestricted');
+
+            kabagUmumArea.classList.add('hidden');
+            dirutArea.classList.add('hidden');
+            completedArea.classList.add('hidden');
+            rejectedArea.classList.add('hidden');
+
+            if (r.stage === 'Menunggu Persetujuan Kabag Umum') {
+                kabagUmumArea.classList.remove('hidden');
+                if (currentUser && (currentUser.role === 'kabag_umum' || currentUser.role === 'superadmin')) {
+                    kabagUmumButtons.classList.remove('hidden');
+                    kabagUmumRestricted.classList.add('hidden');
+                } else {
+                    kabagUmumButtons.classList.add('hidden');
+                    kabagUmumRestricted.classList.remove('hidden');
+                }
+            } else if (r.stage === 'Menunggu Persetujuan Direktur Utama') {
+                dirutArea.classList.remove('hidden');
+                if (currentUser && (currentUser.role === 'dirut' || currentUser.role === 'superadmin')) {
+                    dirutButtons.classList.remove('hidden');
+                    dirutRestricted.classList.add('hidden');
+                } else {
+                    dirutButtons.classList.add('hidden');
+                    dirutRestricted.classList.remove('hidden');
+                }
+            } else if (r.stage === 'Disetujui Direktur Utama') {
+                completedArea.classList.remove('hidden');
+            } else if (r.stage.includes('Ditolak')) {
+                rejectedArea.classList.remove('hidden');
+            }
+
+            document.getElementById('workflowModal').classList.remove('hidden');
+        }
+
+        function closeDetailModal() {
+            document.getElementById('workflowModal').classList.add('hidden');
+        }
+
+        async function processDecision(nextStage, actorRole, statusType) {
+            if (!currentUser) {
+                alert('Anda harus login terlebih dahulu!');
+                return;
+            }
+
+            if (actorRole === 'Kabag Umum' && currentUser.role !== 'kabag_umum' && currentUser.role !== 'superadmin') {
+                alert('Akses Ditolak!');
+                return;
+            }
+
+            if (actorRole === 'Direktur Utama' && currentUser.role !== 'dirut' && currentUser.role !== 'superadmin') {
+                alert('Akses Ditolak!');
+                return;
+            }
+
+            const r = requests.find(x => x.id === activeTicketId);
+            if (!r) return;
+
+            const note = document.getElementById('modalNoteInput').value;
+            const newFilesInput = document.getElementById('modalProcessFile');
+
+            r.stage = nextStage;
+            r.actor = actorRole;
+
+            const dateTimeNow = getCurrentDateTime();
+            let logMsg = '';
+
+            if (statusType === 'disetujui') {
+                if (nextStage === 'Menunggu Persetujuan Direktur Utama') {
+                    logMsg = `[${dateTimeNow} - ${actorRole}] Disetujui Kabag Umum.`;
+                } else {
+                    logMsg = `[${dateTimeNow} - ${actorRole}] Disetujui penuh oleh Direktur Utama.`;
+                }
+            } else {
+                logMsg = `[${dateTimeNow} - ${actorRole}] Ditolak.`;
+            }
+
+            if (note.trim() !== '') {
+                logMsg += ` Catatan: "${note}"`;
+            }
+
+            r.notes.push(logMsg);
+
+            if (newFilesInput.files.length > 0) {
+                Array.from(newFilesInput.files).forEach(f => {
+                    r.files.push(f.name);
+                });
+            }
+
+            await syncToCloud();
+
+            alert(`Persetujuan diperbarui: ${nextStage}`);
+            closeDetailModal();
+            renderTable();
+            renderPublicApprovedTable();
+        }
+
+        function printTicketPDF() {
+            const r = requests.find(x => x.id === activeTicketId);
+            if (!r) return;
+
+            const printArea = document.getElementById('printArea');
+            const printContent = document.getElementById('printContent');
+            
+            let itemsHtml = r.items.map((it, idx) => `
+                <tr style="page-break-inside: avoid; break-inside: avoid;">
+                    <td style="border: 1px solid #000; padding: 4px 6px; text-align: center; font-weight: bold;">${idx + 1}</td>
+                    <td style="border: 1px solid #000; padding: 4px 6px;">${it.nama}</td>
+                    <td style="border: 1px solid #000; padding: 4px 6px; text-align: center;">${it.qty}</td>
+                    <td style="border: 1px solid #000; padding: 4px 6px;">${it.satuan}</td>
+                    <td style="border: 1px solid #000; padding: 4px 6px;">${it.keterangan || '-'}</td>
+                </tr>
+            `).join('');
+
+            printContent.innerHTML = `
+                <div class="print-section" style="font-family: Arial, sans-serif; font-size: 10.5px; color: #000; line-height: 1.25; max-width: 100%; margin: 0 auto;">
+                    <div style="text-align: center; border-bottom: 2px solid #000; padding-bottom: 4px; margin-bottom: 8px;">
+                        <h2 style="font-size: 15px; font-weight: bold; margin: 0; text-transform: uppercase;">FORMULIR PERMINTAAN BARANG</h2>
+                        <p style="font-size: 9.5px; margin: 2px 0 0 0; font-weight: bold;">Dokumen Resmi Pengadaan - Telah Disetujui Direktur Utama</p>
+                    </div>
+
+                    <table style="width: 100%; border-collapse: collapse; margin-bottom: 8px; border: 1px solid #000;">
+                        <tr><td style="padding: 3px 5px; border: 1px solid #000; font-weight: bold; background: #f1f5f9; width: 28%;">NO. PENGAJUAN</td><td style="padding: 3px 5px; border: 1px solid #000; font-weight: bold;">${r.id}</td></tr>
+                        <tr><td style="padding: 3px 5px; border: 1px solid #000; font-weight: bold; background: #f1f5f9;">Tanggal Pengajuan</td><td style="padding: 3px 5px; border: 1px solid #000;">${r.tanggal}</td></tr>
+                        <tr><td style="padding: 3px 5px; border: 1px solid #000; font-weight: bold; background: #f1f5f9;">Kabag Pemohon / Divisi</td><td style="padding: 3px 5px; border: 1px solid #000;">${r.pemohon} (${r.divisi})</td></tr>
+                        <tr><td style="padding: 3px 5px; border: 1px solid #000; font-weight: bold; background: #f1f5f9;">Urgensi Kebutuhan</td><td style="padding: 3px 5px; border: 1px solid #000;">${r.urgensi}</td></tr>
+                        <tr><td style="padding: 3px 5px; border: 1px solid #000; font-weight: bold; background: #f1f5f9;">Keterangan</td><td style="padding: 3px 5px; border: 1px solid #000;">${r.alasan}</td></tr>
+                        <tr><td style="padding: 3px 5px; border: 1px solid #000; font-weight: bold; background: #f1f5f9;">Status Persetujuan Final</td><td style="padding: 3px 5px; border: 1px solid #000; font-weight: bold; color: #047857;">${r.stage}</td></tr>
+                    </table>
+
+                    <h4 style="font-weight: bold; font-size: 10.5px; margin: 0 0 3px 0;">RINCIAN BARANG DIAJUKAN:</h4>
+                    <table style="width: 100%; border-collapse: collapse; margin-bottom: 8px; border: 1px solid #000;">
+                        <thead>
+                            <tr style="background: #f1f5f9;">
+                                <th style="border: 1px solid #000; padding: 3px 5px; text-align: center; width: 30px;">No.</th>
+                                <th style="border: 1px solid #000; padding: 3px 5px; text-align: left;">Nama Barang</th>
+                                <th style="border: 1px solid #000; padding: 3px 5px; text-align: center; width: 50px;">Qty</th>
+                                <th style="border: 1px solid #000; padding: 3px 5px; text-align: left; width: 60px;">Satuan</th>
+                                <th style="border: 1px solid #000; padding: 3px 5px; text-align: left;">Keterangan / Catatan</th>
+                            </tr>
+                        </thead>
+                        <tbody>${itemsHtml}</tbody>
+                    </table>
+
+                    <div style="margin-top: 6px;">
+                        <h4 style="font-weight: bold; font-size: 10.5px; border-bottom: 1px solid #000; padding-bottom: 2px; margin: 0 0 3px 0;">RIWAYAT PERSETUJUAN & CATATAN TAHAPAN:</h4>
+                        <ul style="padding-left: 14px; margin: 0; list-style-type: disc; font-size: 9.5px;">
+                            ${r.notes.map(n => `<li style="margin-bottom: 1px;">${n}</li>`).join('')}
+                        </ul>
+                    </div>
+                </div>
+            `;
+
+            printArea.classList.remove('hidden');
+
+            setTimeout(() => {
+                window.print();
+                printArea.classList.add('hidden');
+            }, 200);
+        }
+
+        function toggleSelectAll(source) {
+            const checkboxes = document.querySelectorAll('.ticket-checkbox');
+            checkboxes.forEach(cb => cb.checked = source.checked);
+            checkSelected();
+        }
+
+        function checkSelected() {
+            const selected = document.querySelectorAll('.ticket-checkbox:checked');
+            const btnDelete = document.getElementById('btnDeleteSelected');
+            if (selected.length > 0) {
+                btnDelete.classList.remove('hidden');
+            } else {
+                btnDelete.classList.add('hidden');
+            }
+        }
+
+        async function deleteSelected() {
+            if (!confirm('Apakah Anda yakin ingin menghapus data terpilih?')) return;
+            const selected = document.querySelectorAll('.ticket-checkbox:checked');
+            const idsToDelete = Array.from(selected).map(cb => cb.value);
+
+            requests = requests.filter(r => !idsToDelete.includes(r.id));
+            await syncToCloud();
+            renderTable();
+            renderPublicApprovedTable();
+            document.getElementById('btnDeleteSelected').classList.add('hidden');
+        }
+
+        function openUserSetupModal() {
+            renderUserTable();
+            document.getElementById('userSetupModal').classList.remove('hidden');
+        }
+
+        function closeUserSetupModal() {
+            document.getElementById('userSetupModal').classList.add('hidden');
+        }
+
+        function renderUserTable() {
+            const tbody = document.getElementById('userTableBody');
+            tbody.innerHTML = '';
+            users.forEach((u, index) => {
+                const tr = document.createElement('tr');
+                tr.className = 'border-b';
+                tr.innerHTML = `
+                    <td class="p-2.5">
+                        <img src="${u.avatar || DEFAULT_AVATAR}" alt="Avatar" class="w-7 h-7 rounded-full object-cover border">
+                    </td>
+                    <td class="p-2.5 font-bold">${u.username}</td>
+                    <td class="p-2.5">${u.name}</td>
+                    <td class="p-2.5"><span class="bg-indigo-100 text-indigo-800 text-[10px] font-bold px-2 py-0.5 rounded uppercase">${u.role}</span></td>
+                    <td class="p-2.5 text-center">
+                        <div class="flex justify-center items-center gap-3">
+                            <button onclick="openChangePasswordModal(${index})" class="text-indigo-600 hover:text-indigo-800 font-bold text-xs" title="Update Password">
+                                <i class="fa-solid fa-key"></i>
+                            </button>
+                            ${u.username !== 'admin' ? `<button onclick="deleteUser(${index})" class="text-red-600 hover:text-red-800 font-bold text-xs" title="Hapus User"><i class="fa-solid fa-trash"></i></button>` : ''}
+                        </div>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        async function handleCreateUser(e) {
+            e.preventDefault();
+            const username = document.getElementById('newUserUsername').value;
+            const name = document.getElementById('newUserName').value;
+            const pass = document.getElementById('newUserPassword').value;
+            const role = document.getElementById('newUserRole').value;
+
+            users.push({ username, name, pass, role, avatar: DEFAULT_AVATAR });
+            await syncToCloud();
+            renderUserTable();
+            e.target.reset();
+            alert('User baru berhasil ditambahkan!');
+        }
+
+        function openChangePasswordModal(index) {
+            if (!currentUser || currentUser.role !== 'superadmin') {
+                alert('Akses ditolak!');
+                return;
+            }
+
+            const user = users[index];
+            if (!user) return;
+
+            document.getElementById('changePasswordUserIndex').value = index;
+            document.getElementById('changePasswordUsername').value = user.username;
+            document.getElementById('changePasswordName').value = user.name;
+            document.getElementById('changePasswordNew').value = '';
+            document.getElementById('changePasswordConfirm').value = '';
+            document.getElementById('changePasswordModal').classList.remove('hidden');
+        }
+
+        function closeChangePasswordModal() {
+            document.getElementById('changePasswordModal').classList.add('hidden');
+        }
+
+        async function handleChangePassword(e) {
+            e.preventDefault();
+            const index = parseInt(document.getElementById('changePasswordUserIndex').value, 10);
+            const newPassword = document.getElementById('changePasswordNew').value;
+            const confirmPassword = document.getElementById('changePasswordConfirm').value;
+
+            if (newPassword !== confirmPassword) {
+                alert('Password tidak sama!');
+                return;
+            }
+
+            users[index].pass = newPassword;
+            await syncToCloud();
+            renderUserTable();
+            closeChangePasswordModal();
+            alert('Password berhasil diperbarui.');
+        }
+
+        function openUserProfileModal() {
+            if (!currentUser) return;
+
+            document.getElementById('profileUsername').value = currentUser.username;
+            document.getElementById('profileName').value = currentUser.name;
+            document.getElementById('profileNewPassword').value = '';
+            document.getElementById('profileConfirmPassword').value = '';
+            document.getElementById('profileAvatarPreview').src = currentUser.avatar || DEFAULT_AVATAR;
+
+            document.getElementById('userProfileModal').classList.remove('hidden');
+        }
+
+        function closeUserProfileModal() {
+            document.getElementById('userProfileModal').classList.add('hidden');
+        }
+
+        function previewProfileAvatar(input) {
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    document.getElementById('profileAvatarPreview').src = e.target.result;
+                };
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+
+        async function handleSaveUserProfile(e) {
+            e.preventDefault();
+            if (!currentUser) return;
+
+            const newName = document.getElementById('profileName').value.trim();
+            const newPass = document.getElementById('profileNewPassword').value;
+            const confirmPass = document.getElementById('profileConfirmPassword').value;
+            const avatarPreviewSrc = document.getElementById('profileAvatarPreview').src;
+
+            if (newPass && newPass !== confirmPass) {
+                alert('Konfirmasi password tidak cocok!');
+                return;
+            }
+
+            const targetUser = users.find(u => u.username === currentUser.username);
+            if (targetUser) {
+                targetUser.name = newName;
+                targetUser.avatar = avatarPreviewSrc;
+                if (newPass) targetUser.pass = newPass;
+
+                currentUser.name = newName;
+                currentUser.avatar = avatarPreviewSrc;
+                if (newPass) currentUser.pass = newPass;
+
+                await syncToCloud();
+                updateUIForLoggedInUser();
+                closeUserProfileModal();
+                alert('Profil diperbarui!');
+            }
+        }
+
+        // PERBAIKAN: Fungsi penanganan visibilitas password
+        function togglePasswordVisibility(inputId, button) {
+            const input = document.getElementById(inputId);
+            const icon = button.querySelector('i');
+            if (input.type === 'password') {
+                input.type = 'text';
+                icon.classList.remove('fa-eye');
+                icon.classList.add('fa-eye-slash');
+            } else {
+                input.type = 'password';
+                icon.classList.remove('fa-eye-slash');
+                icon.classList.add('fa-eye');
+            }
+        }
+
+        async function deleteUser(index) {
+            if (!currentUser || currentUser.role !== 'superadmin') return;
+            if (confirm('Hapus pengguna ini?')) {
+                users.splice(index, 1);
+                await syncToCloud();
+                renderUserTable();
+            }
+        }
+    </script>
+</body>
+</html>
