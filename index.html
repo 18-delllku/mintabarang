@@ -155,19 +155,24 @@
         let existingData = [];
         let sha = null;
 
+        // Gunakan prefix 'Bearer' untuk Fine-Grained Personal Access Token (github_pat_...)
+        const authHeader = GITHUB_CONFIG.token.startsWith('github_pat_') 
+            ? `Bearer ${GITHUB_CONFIG.token}` 
+            : `token ${GITHUB_CONFIG.token}`;
+
         // 1. Ambil data file JSON lama jika ada
         try {
             const getResponse = await fetch(url, {
                 method: 'GET',
                 headers: {
-                    'Authorization': `token ${GITHUB_CONFIG.token}`,
+                    'Authorization': authHeader,
                     'Accept': 'application/vnd.github.v3+json'
                 }
             });
 
             if (getResponse.ok) {
                 const fileData = await getResponse.json();
-                sha = fileData.sha; // SHA diperlukan jika ingin memperbarui file
+                sha = fileData.sha;
                 // Decode isi file dari Base64 ke string UTF-8
                 const content = decodeURIComponent(escape(atob(fileData.content)));
                 existingData = JSON.parse(content);
@@ -190,13 +195,13 @@
         };
 
         if (sha) {
-            bodyData.sha = sha; // Sertakan SHA untuk pembaruan file
+            bodyData.sha = sha;
         }
 
         const putResponse = await fetch(url, {
             method: 'PUT',
             headers: {
-                'Authorization': `token ${GITHUB_CONFIG.token}`,
+                'Authorization': authHeader,
                 'Content-Type': 'application/json',
                 'Accept': 'application/vnd.github.v3+json'
             },
