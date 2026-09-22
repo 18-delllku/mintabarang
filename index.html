@@ -3,46 +3,222 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Aplikasi Web Saya</title>
+    <title>Form Permintaan Barang</title>
     <style>
         body {
             font-family: Arial, sans-serif;
-            text-align: center;
-            background-color: #f4f4f9;
-            margin: 0;
-            padding: 50px;
+            margin: 20px;
+            background-color: #f4f6f9;
         }
-        h1 {
+        .container {
+            max-width: 600px;
+            margin: auto;
+            background: #ffffff;
+            padding: 25px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h2 {
+            text-align: center;
             color: #333;
         }
-        p {
-            color: #666;
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input, select, textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
         }
         button {
-            padding: 10px 20px;
-            font-size: 16px;
-            background-color: #007bff;
+            width: 100%;
+            padding: 12px;
+            background-color: #28a745;
             color: white;
             border: none;
-            border-radius: 5px;
+            border-radius: 4px;
+            font-size: 16px;
             cursor: pointer;
         }
-        button:hover {
-            background-color: #0056b3;
+        button:disabled {
+            background-color: #a5d6a7;
+            cursor: not-allowed;
+        }
+        #statusMessage {
+            margin-top: 15px;
+            padding: 10px;
+            border-radius: 4px;
+            display: none;
+            text-align: center;
+        }
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
         }
     </style>
 </head>
 <body>
 
-    <h1>Selamat Datang di Web Saya!</h1>
-    <p>Ini adalah aplikasi web pertama saya yang di-hosting di GitHub Pages.</p>
-    <button onclick="sapa()">Klik Saya</button>
+<div class="container">
+    <h2>Form Permintaan Barang</h2>
+    <form id="requestForm">
+        <div class="form-group">
+            <label for="namaPemohon">Nama Pemohon</label>
+            <input type="text" id="namaPemohon" required placeholder="Masukkan nama pemohon">
+        </div>
 
-    <script>
-        function sapa() {
-            alert("Halo! Terima kasih telah mengunjungi web ini.");
+        <div class="form-group">
+            <label for="divisi">Divisi / Unit Kerja</label>
+            <input type="text" id="divisi" required placeholder="Masukkan divisi">
+        </div>
+
+        <div class="form-group">
+            <label for="namaBarang">Nama Barang</label>
+            <input type="text" id="namaBarang" required placeholder="Contoh: Kertas A4, Pulpen, Keyboard">
+        </div>
+
+        <div class="form-group">
+            <label for="jumlah">Jumlah</label>
+            <input type="number" id="jumlah" min="1" required placeholder="1">
+        </div>
+
+        <div class="form-group">
+            <label for="keterangan">Keterangan / Alasan Permintaan</label>
+            <textarea id="keterangan" rows="3" placeholder="Keperluan operasional..."></textarea>
+        </div>
+
+        <button type="submit" id="btnSubmit">Kirim Permintaan</button>
+    </form>
+
+    <div id="statusMessage"></div>
+</div>
+
+<script>
+    // Konfigurasi GitHub API
+    const GITHUB_CONFIG = {
+        token: "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",
+        owner: "18-delllku", // Ganti dengan username GitHub Anda
+        repo: "mintabarang",  // Ganti dengan nama repository Anda
+        path: "data/permintaan_barang.json" // Jalur penyimpanan file JSON di repository
+    };
+
+    const form = document.getElementById('requestForm');
+    const btnSubmit = document.getElementById('btnSubmit');
+    const statusMessage = document.getElementById('statusMessage');
+
+    form.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        btnSubmit.disabled = true;
+        btnSubmit.innerText = "Lagi Menyimpan...";
+        showStatus("", "");
+
+        const newRequest = {
+            id: "REQ-" + Date.now(),
+            tanggal: new Date().toISOString(),
+            namaPemohon: document.getElementById('namaPemohon').value,
+            divisi: document.getElementById('divisi').value,
+            namaBarang: document.getElementById('namaBarang').value,
+            jumlah: parseInt(document.getElementById('jumlah').value),
+            keterangan: document.getElementById('keterangan').value
+        };
+
+        try {
+            await saveDataToGitHub(newRequest);
+            showStatus("Data permintaan barang berhasil disimpan ke GitHub!", "success");
+            form.reset();
+        } catch (error) {
+            console.error(error);
+            showStatus("Gagal menyimpan data: " + error.message, "error");
+        } finally {
+            btnSubmit.disabled = false;
+            btnSubmit.innerText = "Kirim Permintaan";
         }
-    </script>
+    });
+
+    async function saveDataToGitHub(newData) {
+        const url = `https://api.github.com/repos/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}/contents/${GITHUB_CONFIG.path}`;
+        
+        let existingData = [];
+        let sha = null;
+
+        // 1. Ambil data file JSON lama jika ada
+        try {
+            const getResponse = await fetch(url, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `token ${GITHUB_CONFIG.token}`,
+                    'Accept': 'application/vnd.github.v3+json'
+                }
+            });
+
+            if (getResponse.ok) {
+                const fileData = await getResponse.json();
+                sha = fileData.sha; // SHA diperlukan jika ingin memperbarui file
+                // Decode isi file dari Base64 ke string UTF-8
+                const content = decodeURIComponent(escape(atob(fileData.content)));
+                existingData = JSON.parse(content);
+            }
+        } catch (err) {
+            console.warn("File belum ada atau gagal dibaca, membuat data baru.", err);
+        }
+
+        // 2. Tambahkan data baru ke array
+        existingData.push(newData);
+
+        // 3. Konversi array data ke JSON & encode ke Base64
+        const updatedJsonString = JSON.stringify(existingData, null, 2);
+        const encodedContent = btoa(unescape(encodeURIComponent(updatedJsonString)));
+
+        // 4. Kirim data baru ke GitHub API via Commit
+        const bodyData = {
+            message: `Tambah permintaan barang: ${newData.namaBarang} (${newData.namaPemohon})`,
+            content: encodedContent
+        };
+
+        if (sha) {
+            bodyData.sha = sha; // Sertakan SHA untuk pembaruan file
+        }
+
+        const putResponse = await fetch(url, {
+            method: 'PUT',
+            headers: {
+                'Authorization': `token ${GITHUB_CONFIG.token}`,
+                'Content-Type': 'application/json',
+                'Accept': 'application/vnd.github.v3+json'
+            },
+            body: JSON.stringify(bodyData)
+        });
+
+        if (!putResponse.ok) {
+            const errorDetail = await putResponse.json();
+            throw new Error(errorDetail.message || "Terjadi kesalahan HTTP");
+        }
+    }
+
+    function showStatus(message, type) {
+        if (!message) {
+            statusMessage.style.display = "none";
+            return;
+        }
+        statusMessage.className = type;
+        statusMessage.innerText = message;
+        statusMessage.style.display = "block";
+    }
+</script>
 
 </body>
 </html>
